@@ -6,7 +6,7 @@ axel_len = .62; %meters
 
 
 %robot_speed = @(omega) exp(-(abs(omega).^3));
-robot_speed = @(omega) top_wheel_speed * exp(-(abs(omega*(1.4*axel_len)).^3));
+%robot_speed = @(omega) top_wheel_speed * exp(-(abs(omega*(1.4*axel_len)).^3));
 
 angle1 = pi/2;
 P3 = [2;-1];
