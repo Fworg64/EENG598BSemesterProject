@@ -10,22 +10,25 @@ function [max_left_vels, max_right_vels, speeds, omega_dt ,times_at_t]...
   b = (1 + omega_dx.* axel_len/2)./... % b is for ur on the left
       (1 - omega_dx.* axel_len/2);    % new_ur must = b*new_ul
   %changes between t's
-  a_diff = a(2:end) - a(1:end-1);
-  a_diff = [0,a_diff];
-  b_diff = b(2:end) - b(1:end-1);
-  b_diff = [0,b_diff];
-  delta_a_delta_x = a_diff ./ delta_x_delta_t;
-  delta_b_delta_x = b_diff ./ delta_x_delta_t;
+  
   %take central difference of a,b with edge repeat
   a_diff = a(2:end) - a(1:end-1);
   a_diff = [0,a_diff,0]; %edge of a repeated
-  extend_delta_x = [delta_x_delta_t(1), delta_x_delta_t, delta_x_delta_t(end)]
+  b_diff = b(2:end) - b(1:end-1);
+  b_diff = [0,b_diff, 0];
+  delta_a_delta_x = zeros(1,length(omega_dx));
+  delta_b_delta_x = zeros(1,length(omega_dx));
+
+  extend_delta_x = [delta_x_delta_t(1), delta_x_delta_t, delta_x_delta_t(end)];
   for index = 1:length(omega_dx)
       delta_a_delta_x(index) = .5*(a_diff(index)/extend_delta_x(index) ...
-                             + a_diff(index+1)/extend_delta_x(index)); 
-      
+                             + a_diff(index+1)/extend_delta_x(index+1)); 
+      delta_b_delta_x(index) = .5*(b_diff(index)/extend_delta_x(index) ...
+                             + b_diff(index+1)/extend_delta_x(index+1));
   end
   
+  %find max possible velocities if max correction was being applied
+  % for each point on the path and its change in curvature.
   Ul_dot = zeros(1,length(omega_dx));
   Ur_dot = zeros(1,length(omega_dx));
   Ul = zeros(1,length(omega_dx));
@@ -56,20 +59,52 @@ function [max_left_vels, max_right_vels, speeds, omega_dt ,times_at_t]...
               end
           end
           %calculate max Ur^2 and use Ul = a*Ur to find vels
-          Ur(index) = sqrt((Ul_dot(index) - Ur_dot(index)*a(index))*2 ...
-                      / (delta_a_delta_x(index)*(1 + a(index))));
-          Ul(index) = a(index)*Ur(index);
+          Ur(index) = max(-max_wheel_speed,min(max_wheel_speed,...
+                      sqrt((Ul_dot(index) - Ur_dot(index)*a(index))*2 ...
+                      / (delta_a_delta_x(index)*(1 + a(index))))));
+          Ul(index) = max(-max_wheel_speed,min(max_wheel_speed,a(index)*Ur(index)));
       else
           Ul_dot(index) = a*max_accel_abs; % 
           Ur_dot(index) = max_accel_abs;
+          
           Ur(index) = max_wheel_speed;
+          Ul(index) = a*max_wheel_speed;
+      end
+  else %better'd use b
+      if abs(delta_b_delta_x(index)) > .001
+          if delta_b_delta_x(index)> 0 % straitening out, left wheel faster
+                        %right wheel getting faster
+              %max correction
+              if b > 0 %turning outside right wheel
+                  Ul_dot(index) = -max_accel_abs; %speed up
+                  Ur_dot(index) = max_accel_abs;
+              else %turning inside right wheel 
+                  Ul_dot(index) = max_accel_abs; % 
+                  Ur_dot(index) = max_accel_abs;
+              end
+          else %turning more, left wheel faster
+               %right wheel getting slower
+               %max_correction
+              if b(index) > 0 %turning outside right wheel
+                  Ul_dot(index) = max_accel_abs; 
+                  Ur_dot(index) = -max_accel_abs;%slow down
+              else %turning inside right wheel
+                  Ul_dot(index) = -max_accel_abs; % 
+                  Ur_dot(index) = -max_accel_abs;
+              end
+          end
+          %calculate max Ul^2 and use Ul = a*Ur to find vels
+          Ul(index) = max(-max_wheel_speed,min(max_wheel_speed,...
+                      sqrt((Ur_dot(index) - Ul_dot(index)*b(index))*2 ...
+                      / (delta_b_delta_x(index)*(1 + b(index))))));
+          Ur(index) =  max(-max_wheel_speed,min(max_wheel_speed,b(index)*Ul(index)));
+      else
+          Ul_dot(index) = max_accel_abs; % 
+          Ur_dot(index) = b*max_accel_abs;
+          
+          Ur(index) = b(index)*max_wheel_speed;
           Ul(index) = max_wheel_speed;
       end
-      %calculate max Ur^2 and use Ul = a*Ur to find vels
-      Ur(index) = max(-max_wheel_speed,min(max_wheel_speed,...
-                    sqrt((Ul_dot(index) - Ur_dot(index)*a(index))*2 ...
-                  / (delta_a_delta_x(index)*(1 + a(index))))));
-      Ul(index) = max(-max_wheel_speed,min(max_wheel_speed,a(index)*Ur(index)));
   end
   end
    figure()
