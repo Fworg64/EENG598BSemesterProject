@@ -2,7 +2,8 @@ function [max_left_vels, max_right_vels, speeds, omega_dt ,times_at_t]...
          = generate_velocities_from_path(omega_dx, delta_x_delta_t,...
                                    axel_len, max_accel_abs, max_wheel_speed)
 %GENERATE_VELOCITIES_FROM_PATH Finds max vels at max correction
-%   Detailed explanation goes here
+%   This constitues the Control Invarient Set, the pairs of states
+%   and control inputs that are the boundary of the constraints.
   %Left wheel slower, a in [-1, 1]
   a = (1 - omega_dx.* axel_len/2)./... % a is for ul on the left
       (1 + omega_dx.* axel_len/2);    % new_ul must = a*new_ur
@@ -64,18 +65,18 @@ function [max_left_vels, max_right_vels, speeds, omega_dt ,times_at_t]...
                       / (delta_a_delta_x(index)*(1 + a(index))))));
           Ul(index) = max(-max_wheel_speed,min(max_wheel_speed,a(index)*Ur(index)));
       else
-          Ul_dot(index) = a*max_accel_abs; % 
+          Ul_dot(index) = a(index)*max_accel_abs; % 
           Ur_dot(index) = max_accel_abs;
           
           Ur(index) = max_wheel_speed;
-          Ul(index) = a*max_wheel_speed;
+          Ul(index) = a(index)*max_wheel_speed;
       end
   else %better'd use b
       if abs(delta_b_delta_x(index)) > .001
           if delta_b_delta_x(index)> 0 % straitening out, left wheel faster
                         %right wheel getting faster
               %max correction
-              if b > 0 %turning outside right wheel
+              if b(index) > 0 %turning outside right wheel
                   Ul_dot(index) = -max_accel_abs; %speed up
                   Ur_dot(index) = max_accel_abs;
               else %turning inside right wheel 
@@ -100,18 +101,23 @@ function [max_left_vels, max_right_vels, speeds, omega_dt ,times_at_t]...
           Ur(index) =  max(-max_wheel_speed,min(max_wheel_speed,b(index)*Ul(index)));
       else
           Ul_dot(index) = max_accel_abs; % 
-          Ur_dot(index) = b*max_accel_abs;
+          Ur_dot(index) = b(index)*max_accel_abs;
           
           Ur(index) = b(index)*max_wheel_speed;
           Ul(index) = max_wheel_speed;
       end
   end
   end
-   figure()
-   plot(Ul(70:end))
- hold on
- plot(Ur(70:end))
- plot(a(70:end))
- print("det")
+  max_left_vels = Ul;
+  max_right_vels = Ur;
+  speeds = .5 * (Ul + Ur);
+  omega_dt = (Ur - Ul)/ axel_len;
+  times_at_t = delta_x_delta_t ./ speeds; %should compare with radians/omega too
+%    figure()
+%    plot(Ul(70:end))
+%  hold on
+%  plot(Ur(70:end))
+%  plot(a(70:end))
+%  print("det")
 end
 

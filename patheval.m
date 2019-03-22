@@ -66,36 +66,20 @@ max_wheel_speed = 1;
 
 %get max possible velocities if max correction is used at each point in the
 %path, while maximizing speed
+%This is the Robust Control Invarient Set. Invarient sets are sets of
+% control inputs and states that keep the constraints satisfied.
+
+%TODO make more breaking torque available than speed increase accel
+
 [max_left_vels, max_right_vels, speeds, omega_dt ,times_at_t] ...
     = generate_velocities_from_path(omega_dx, delta_x_delta_t, axel_len,...
     max_accel_abs, max_wheel_speed);
-%TODO, check that torque constraint is satisfied
 
-%for index = 1:length(omega_dx)
-%    prev_speed = .5 * (prev_ul + prev_ur); %decent estimate of the next speed
-%      %from quadratic: dist = V0*t + .5 * accel * t^2
-%      time_at_t = (-prev_speed + ...
-%                   sqrt(prev_speed^2 + 2*max_accel*delta_x_delta_t(index)))...
-%                   /max_accel;
-%      max_change = max_accel * time_at_t;
-%     [speeds(index), omega_dt(index),...
-%      left_vels(index), right_vels(index), times_at_t(index)] = ...
-%         sscv2020(top_wheel_speed, axel_len, omega_dx(index), ...
-%                  prev_ul, prev_ur, max_accel, delta_x_delta_t(index));
-%     prev_ul = left_vels(index);
-%     prev_ur = right_vels(index);
-% end
+%TODO add plot for max vel envelopes
 
-% omega_dt = zeros(1,length(omega_dx));
-% for index = 1:length(omega_dx)
-%     if omega_dx(index) > 0
-%         omega_dt(index) = omega_dx(index) * top_wheel_speed / ...
-%                           (1 + omega_dx(index) * axel_len/2);
-%     else
-%         omega_dt(index) = omega_dx(index) * top_wheel_speed / ...
-%                           (1 - omega_dx(index) * axel_len/2);
-%     end
-% end
+%TODO Fit controller inputs to Control Invarient Set (Control Envelope)
+%and find time to travel along the path using this ideal control input.
+
  robot_speed_ideal = @(omega) max(0,top_wheel_speed - axel_len/2 * abs(omega));
  max_omega = top_wheel_speed * 2 / axel_len;
 % %if speed is non-zero, get time from delta_x / speed
