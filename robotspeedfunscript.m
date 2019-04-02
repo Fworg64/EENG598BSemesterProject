@@ -4,20 +4,16 @@ angle_norm_type = 'inf'; %l2 norm
 top_wheel_speed = 1.0; %m/s
 axel_len = .62; %meters
 
-
-%robot_speed = @(omega) exp(-(abs(omega).^3));
-robot_speed = @(omega) top_wheel_speed * exp(-(abs(omega*(1.4*axel_len)).^3));
-
-angle1 = pi/2;
+angle1 = 0;
 P3 = [2;-1];
 angle2 = pi/2; %;+.2618;
 
-dist1 = .01;
-dist2 =	.01;
+dist1 = 1.01;
+dist2 =	1.01;
 
 initial_ul = 1;
 initial_ur = 1;
-max_accel = 2.2; % m/s^2
+max_accel = 4.0; % m/s^2
 
 plot = 1;
 

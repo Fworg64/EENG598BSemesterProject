@@ -7,10 +7,8 @@ angle_norm_type = 2; %l2 norm
 %for perfect differential drive with
 top_wheel_speed = 1.0; %m/s
 axel_len = .62; %meters
-%robot_speed = @(omega) top_wheel_speed * exp(-(abs(omega*(1.5*axel_len)).^2));
-%robot_speed = @(omega) top_wheel_speed * exp(-(abs(omega*(1.4*axel_len)).^3));
 
-angle1 = pi/2;
+angle1 = 0;
 P3 = [2;-1];
 angle2 = pi/2;%pi/2; %;+.2618;
 
@@ -23,7 +21,7 @@ x2 = .01:.1:6;
 total_time_plot = zeros(length(x1),length(x2));
 turnance_plot = zeros(length(x1), length(x2));
 tic
-parfor (index1 = 1:length(x1),length(x1))
+parfor (index1 = 1:length(x1),length(x1)) %dont really need the parfor
     xx_1 = x1(index1);
     total_time_plot_row = zeros(1,length(x2));
     turnance_plot_row = zeros(1,length(x2));
