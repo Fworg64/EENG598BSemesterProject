@@ -46,8 +46,11 @@ t_off = t(1:length(t)-1) + dt/2;
 omega_dx = delta_theta_delta_t ./ delta_x_delta_t;
 if (plot_on > 0)
 subplot(4,2,5)
+hold on;
 stem( t_off, delta_theta_delta_t, 'Marker', 's', 'Color', 'b')
-title('Delta radians at segment')
+stem( t_off, delta_x_delta_t, 'Marker', 'd', 'Color', 'r')
+title('Delta radians/dist at segment')
+legend('Delta Rad', 'Delta X')
 end
 turnance = norm(omega_dx,angle_norm); %maybe l2 norm makes more sense?
 %note, depends on speed of vehicle at omega value
@@ -106,18 +109,20 @@ stem( t_off, omega_dt, 'Marker', 'd', 'Color', 'b')
 hold on
 stem( t_off,speeds, 'Marker', '*', 'Color', 'r')
 legend('Omega (rad/s)', 'speed (m/s)');
-title('Radians per second and speed at t')
+title('Max Radians per second and Max speed at t')
 %plot given speed function for reference
 subplot(4,2,7)
 example_omega = -1.5*max_omega:.01:1.5*max_omega;
 plot(example_omega, robot_speed_ideal(example_omega));
 hold on
-colors = linspace(1,10,length(omega_dt));
+colors = linspace(0,1,length(omega_dt));
 scatter(omega_dt, speeds, [], colors);
-title('Speed vs omega (radians per second)')
+title('Max Speed vs omega (radians per second)')
+caxis([0, 1])
+colorbar;
 subplot(4,2,8)
 stem(t_off, delta_time_delta_t,'Marker', '^', 'Color', 'b');
-title('Time spent at each segment');
+title('Min Time spent at each segment');
 end
 end
 
