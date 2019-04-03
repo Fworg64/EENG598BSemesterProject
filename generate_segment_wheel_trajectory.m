@@ -45,11 +45,11 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
 %    Note that a_dot(time) = delta_a_delta_x * speed(time);
 %    Also note that delta_x_delta_t, t is path param, not time.
   extend_delta_x = [delta_x_delta_t(1), delta_x_delta_t, delta_x_delta_t(end)];
-  for index = 2%copy pasta%1:length(omega_dx)
-      delta_a_delta_x(index) = .5*(a_diff(index)/extend_delta_x(index) ...
-                             + a_diff(index+1)/extend_delta_x(index+1)); 
-      delta_b_delta_x(index) = .5*(b_diff(index)/extend_delta_x(index) ...
-                             + b_diff(index+1)/extend_delta_x(index+1));
+  for index_from_prev = 2%copy pasta%1:length(omega_dx)
+      delta_a_delta_x(index_from_prev) = .5*(a_diff(index_from_prev)/extend_delta_x(index_from_prev) ...
+                             + a_diff(index_from_prev+1)/extend_delta_x(index_from_prev+1)); 
+      delta_b_delta_x(index_from_prev) = .5*(b_diff(index_from_prev)/extend_delta_x(index_from_prev) ...
+                             + b_diff(index_from_prev+1)/extend_delta_x(index_from_prev+1));
   end
 % 4. Find vector of velocities for 'ideal' trajectory
   prealloc_size = 10;
@@ -62,80 +62,101 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
   Ur(1) = starting_right_speed;
   x_trav = 0;
   theta_trav = 0;
+  truidex = 0;
   while ~(x_trav >= delta_x_delta_t && theta_trav >= omega_dx*delta_x_delta_t)
-    index = 2; %copy pasta
+    truidex = truidex + 1;
+    index_from_prev = 2; %copy pasta
     %should happen at the same time anyway
     %want to solve problem for well conditioned side
     % 5. calculate max speed accelerations for each wheel
-    if a(index) < 1 && a(index) > -1
-      if abs(delta_a_delta_x(index)) > .001
-          if delta_a_delta_x(index)> 0 % straitening out, right wheel faster
-                        %left wheel getting faster
-              %max correction on a TODO
-              if a > 0 %turning outside left wheel
-                  Ul_dot(index) = max_accel_abs; %speed up
-                  Ur_dot(index) = -max_accel_abs;
-              else %turning inside left wheel
-                  Ul_dot(index) = max_accel_abs; % 
-                  Ur_dot(index) = max_accel_abs;
-              end
-          else %turning more, right wheel faster
-               %left wheel getting slower
-               %max_correction
-              if a(index) > 0 %turning outside left wheel
-                  Ul_dot(index) = -max_accel_abs; %slow down
-                  Ur_dot(index) = max_accel_abs;
-              else %turning inside left wheel
-                  Ul_dot(index) = -max_accel_abs; % 
-                  Ur_dot(index) = -max_accel_abs;
-              end
+    speed = .5 * (Ur(truidex) + Ul(truidex));
+  if a(index_from_prev) < 1 && a(index_from_prev) > -1 % Ul = a Ur, so Ur is bigger                    %left wheel getting faster
+          %calculate
+          %iterate until appropate Ul_dot and Ur_dot are found for this timestep
+          %accel_sum = 0;
+          Ur_dot_plus = 0;
+          Ul_dot_plus = a(index_from_prev)*Ur_dot_plus + ...
+                        delta_a_delta_x(index_from_prev)*speed*Ur(truidex);
+          delta_ul_dot = 10;
+          delta_ur_dot = 10;
+          chi = .02;
+      while (abs(delta_ul_dot) > .01 || abs(delta_ur_dot) > .01)
+          %note that Ul_dot_plus update eq is the same for each case
+          % and the relation bewtwen sign of a, a_dot and condition and
+          % increment direction.
+        if Ul_dot_plus < max_accel_abs
+          if a > 0 %turning outside left wheel
+            Ur_dot_plus = Ur_dot_plus + chi*max_accel_abs;%-max_accel_abs;
+            Ul_dot_plus = a(index_from_prev)*Ur_dot_plus + ...
+                        delta_a_delta_x(index_from_prev)*speed*Ur(truidex);
+            if Ur_dot_plus >= max_accel_abs || Ul_dot_plus >= max_accel_abs
+                delta_ul_dot = 0;
+                delta_ur_dot = 0;
+            end
+          else %turning inside left wheel
+            Ur_dot_plus = Ur_dot_plus - chi*max_accel_abs;%-max_accel_abs;
+            Ul_dot_plus = a(index_from_prev)*Ur_dot_plus + ...
+                        delta_a_delta_x(index_from_prev)*speed*Ur(truidex);
+            if Ur_dot_plus <= -max_accel_abs || Ul_dot_plus >= max_accel_abs
+                delta_ul_dot = 0;
+                delta_ur_dot = 0;
+            end
           end
-          %calculate max Ur^2 and use Ul = a*Ur to find vels
-          Ur(index) = max(-max_wheel_speed,min(max_wheel_speed,...
-                      sqrt((Ul_dot(index) - Ur_dot(index)*a(index))*2 ...
-                      / (delta_a_delta_x(index)*(1 + a(index))))));
-          Ul(index) = max(-max_wheel_speed,min(max_wheel_speed,a(index)*Ur(index)));
-      else
-          Ul_dot(index) = a(index)*max_accel_abs; % 
-          Ur_dot(index) = max_accel_abs;
-          
-          Ur(index) = max_wheel_speed;
-          Ul(index) = a(index)*max_wheel_speed;
-      end
+        else %Ul_dot_plus > max_accel abs ( need to slow down)
+          if a > 0 %turning outside left wheel
+            Ur_dot_plus = Ur_dot_plus - chi*max_accel_abs;%-max_accel_abs;
+            Ul_dot_plus = a(index_from_prev)*Ur_dot_plus + ...
+                        delta_a_delta_x(index_from_prev)*speed*Ur(truidex);
+            if Ur_dot_plus <= -max_accel_abs || Ul_dot_plus <= max_accel_abs
+                delta_ul_dot = 0;
+                delta_ur_dot = 0;
+            end
+          else %turning inside left wheel
+            Ur_dot_plus = Ur_dot_plus + chi*max_accel_abs;%-max_accel_abs;
+            Ul_dot_plus = a(index_from_prev)*Ur_dot_plus + ...
+                        delta_a_delta_x(index_from_prev)*speed*Ur(truidex);
+            if Ur_dot_plus >= max_accel_abs || Ul_dot_plus <= max_accel_abs
+                delta_ul_dot = 0;
+                delta_ur_dot = 0;
+            end
+          end
+        end %end if slower wheel below abs or above
+      end %end while
+           %left wheel getting slower
   else %better'd use b
-      if abs(delta_b_delta_x(index)) > .001
-          if delta_b_delta_x(index)> 0 % straitening out, left wheel faster
+      if abs(delta_b_delta_x(index_from_prev)) > .001
+          if delta_b_delta_x(index_from_prev)> 0 % straitening out, left wheel faster
                         %right wheel getting faster
               %max correction
-              if b(index) > 0 %turning outside right wheel
-                  Ul_dot(index) = -max_accel_abs; %speed up
-                  Ur_dot(index) = max_accel_abs;
+              if b(index_from_prev) > 0 %turning outside right wheel
+                  Ul_dot(index_from_prev) = -max_accel_abs; %speed up
+                  Ur_dot(index_from_prev) = max_accel_abs;
               else %turning inside right wheel 
-                  Ul_dot(index) = max_accel_abs; % 
-                  Ur_dot(index) = max_accel_abs;
+                  Ul_dot(index_from_prev) = max_accel_abs; % 
+                  Ur_dot(index_from_prev) = max_accel_abs;
               end
           else %turning more, left wheel faster
                %right wheel getting slower
                %max_correction
-              if b(index) > 0 %turning outside right wheel
-                  Ul_dot(index) = max_accel_abs; 
-                  Ur_dot(index) = -max_accel_abs;%slow down
+              if b(index_from_prev) > 0 %turning outside right wheel
+                  Ul_dot(index_from_prev) = max_accel_abs; 
+                  Ur_dot(index_from_prev) = -max_accel_abs;%slow down
               else %turning inside right wheel
-                  Ul_dot(index) = -max_accel_abs; % 
-                  Ur_dot(index) = -max_accel_abs;
+                  Ul_dot(index_from_prev) = -max_accel_abs; % 
+                  Ur_dot(index_from_prev) = -max_accel_abs;
               end
           end
           %calculate max Ul^2 and use Ul = a*Ur to find vels
-          Ul(index) = max(-max_wheel_speed,min(max_wheel_speed,...
-                      sqrt((Ur_dot(index) - Ul_dot(index)*b(index))*2 ...
-                      / (delta_b_delta_x(index)*(1 + b(index))))));
-          Ur(index) =  max(-max_wheel_speed,min(max_wheel_speed,b(index)*Ul(index)));
+          Ul(index_from_prev) = max(-max_wheel_speed,min(max_wheel_speed,...
+                      sqrt((Ur_dot(index_from_prev) - Ul_dot(index_from_prev)*b(index_from_prev))*2 ...
+                      / (delta_b_delta_x(index_from_prev)*(1 + b(index_from_prev))))));
+          Ur(index_from_prev) =  max(-max_wheel_speed,min(max_wheel_speed,b(index_from_prev)*Ul(index_from_prev)));
       else
-          Ul_dot(index) = max_accel_abs; % 
-          Ur_dot(index) = b(index)*max_accel_abs;
+          Ul_dot(index_from_prev) = max_accel_abs; % 
+          Ur_dot(index_from_prev) = b(index_from_prev)*max_accel_abs;
           
-          Ur(index) = b(index)*max_wheel_speed;
-          Ul(index) = max_wheel_speed;
+          Ur(index_from_prev) = b(index_from_prev)*max_wheel_speed;
+          Ul(index_from_prev) = max_wheel_speed;
       end
     end
   
