@@ -1,12 +1,16 @@
 function [Uls, Urs, min_total_time, curve_length,turnance, omega_dx, delta_x_delta_t] =...
     patheval(dist1, dist2, angle1, angle2, P0, P3, delta_t, angle_norm,...
-    top_wheel_speed, axel_len,initial_ul, initial_ur,max_accel, delta_time, plot_on)
+    top_wheel_speed, axel_len,initial_ul, initial_ur,max_accel, delta_time, plot_on, do_real_wheels)
 %Given 2 distance parameters, and information for a begining and end pose,
 %this function returns the length of the path and a measure of how much 
 %turning is needed determined by angle_norm (1 for l1, 2 for l2...). Also
 %returns the turn rate per meter at t vector for further analysis. 
 %Additionally, given a speed(turn_rate/dis) func, computes the time
 %to complete the path.
+%Use plot_on to enable/disable plotting (1 is on)
+%Use do_real_wheels to generate an ideal trajectory for the wheels
+%velocity (in development!).
+%if real_wheels are not enabled, Uls, Urs is the final ideal velocity
 dt = delta_t;
 t = 0:dt:1;
 
@@ -78,11 +82,13 @@ times_at_t = zeros(1, length(omega_dx));
 %Fit controller inputs to Control Invarient Set (Control Envelope)
 %and find time to travel along the path using this ideal control input.
 %TODO figure out allocation
+if (do_real_wheels)
 Uls = [];
 Urs = [];
 omega_dx_extend = [omega_dx(1),omega_dx, omega_dx(end)];
 right_start_speed = initial_ur;
 left_start_speed  = initial_ul;
+time_per_segment = zeros(1,length(omega_dx));
 %delta_time = .02;
 for index = 1:length(omega_dx)
     left_max_end_speed = max_left_vels(index);
@@ -97,8 +103,14 @@ for index = 1:length(omega_dx)
                       left_start_speed,   right_start_speed, delta_time);
     left_start_speed  = uls_t(end);
     right_start_speed = urs_t(end);
+    prev_len = length(Uls);
     Uls = [Uls, uls_t];
     Urs = [Urs, urs_t];
+    time_per_segment(index) = length(Uls)*delta_time - prev_len*delta_time;
+end
+else
+    Uls = max_left_vels(end);
+    Urs = max_right_vels(end);
 end
 
  robot_speed_ideal = @(omega) max(0,top_wheel_speed - axel_len/2 * abs(omega));
@@ -152,6 +164,24 @@ title('Wheel Velocity Trajectory vs time');
 xlim([0, wheel_plot_time(end)]);
 xlabel('Time (s)')
 ylabel('Velocity Command (m/s)')
+%plot max speeds too
+%get speed limit vs time
+if (do_real_wheels)
+UlSpeedLim = zeros(1,length(Uls));
+UrSpeedLim = zeros(1,length(Urs));
+innerdex = 0;
+for index = 1:length(omega_dx)
+  length_of_time = time_per_segment(index)/delta_time;
+  for adex = 1:length_of_time
+    innerdex = innerdex + 1;
+    UlSpeedLim(innerdex) = max_left_vels(index);
+    UrSpeedLim(innerdex) = max_right_vels(index);
+  end
+end
+hold on;
+plot(wheel_plot_time, UlSpeedLim,'b--', wheel_plot_time, UrSpeedLim,'r--');
+end
+    
 end
 end
 
