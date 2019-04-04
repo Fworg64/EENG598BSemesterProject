@@ -15,13 +15,13 @@ initial_ul = 1;
 initial_ur = 1;
 max_accel = 4.0; % m/s^2
 
-plot = 1;
+do_plot = 1;
 
 figure()
 tic
 [total_time, curve_length, turnance, omega_dx, delta_x_delta_t] = ...
     patheval(dist1,dist2,angle1,angle2, [0;0],P3,delta_t, angle_norm_type, ...
-    top_wheel_speed, axel_len, initial_ul, initial_ur, max_accel, plot);
+    top_wheel_speed, axel_len, initial_ul, initial_ur, max_accel, do_plot);
 toc
 curve_length
 turnance
