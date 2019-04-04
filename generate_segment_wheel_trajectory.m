@@ -140,7 +140,7 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
                       above_or_below_sign*grad_sign*chi*max_accel_abs;
         Ur_dot_plus = b(index_from_prev)*Ul_dot_plus + ...
                       delta_b_delta_x(index_from_prev)*speed*Ul(truidex-1); 
-        if ((Ur_dot_plus >= max_accel_abs) || (Ur_dot_plus <= -max_accel_abs) ||...
+        if ((Ul_dot_plus >= max_accel_abs) || (Ul_dot_plus <= -max_accel_abs) ||...
            (sign(max_accel_abs - Ur_dot_plus) ~= above_or_below_sign))
             delta_ul_dot = 0;
             delta_ur_dot = 0;
@@ -148,7 +148,7 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
       end
       Ur(truidex) = Ur(truidex-1) + Ur_dot_plus * dt;
       Ul(truidex) = Ul(truidex-1) + Ul_dot_plus * dt;
-    if Ul(truidex) >= curr_max_right_speed
+    if Ul(truidex) >= curr_max_left_speed
       Ul(truidex) = curr_max_left_speed;
       Ur(truidex) = b(index_from_prev) * Ul(truidex);
     end
@@ -164,7 +164,7 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
   end
   end
   
-  left_vels = Ul(2:truidex);
-  right_vels = Ur(2:truidex);
+  left_vels = Ul(1:truidex);
+  right_vels = Ur(1:truidex);
                                        
 end
