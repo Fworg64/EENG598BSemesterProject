@@ -41,8 +41,9 @@ total_time = 0;
 for index = 1:r
     CP = ControlPoints(index, :);
     fun = @(x) shorthand_path(abs(x), CP, initial_ul, initial_ur);
+    %do more exhaustive search
     x = fminsearch(fun, [.5,.5]);
-    x = abs(x)
+    x = abs(x);
     [path_time_eval, Uls, Urs] = shorthand_path(x, CP, initial_ul, initial_ur);
     initial_ul = Uls(end);
     initial_ur = Urs(end);
