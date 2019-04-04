@@ -1,4 +1,4 @@
-function [total_time] = thebigf(ControlPoints)
+function [total_time, d] = thebigf(ControlPoints)
 
 %thebigf
 %calculates the total time required to traverse a path defined by the
@@ -37,14 +37,13 @@ initial_ul = 0;
 initial_ur = 0;
 [r, c] = size(ControlPoints);
 total_time = 0;
-
+d = zeros(r, 2);
 for index = 1:r
     CP = ControlPoints(index, :);
     fun = @(x) shorthand_path(abs(x), CP, initial_ul, initial_ur);
     %do more exhaustive search
-    x = fminsearch(fun, [.5,.5]);
-    x = abs(x);
-    [path_time_eval, Uls, Urs] = shorthand_path(x, CP, initial_ul, initial_ur);
+    d(index,:) = abs(fminsearch(fun, [.5,.5]));
+    [path_time_eval, Uls, Urs] = shorthand_path(d(index,:), CP, initial_ul, initial_ur);
     initial_ul = Uls(end);
     initial_ur = Urs(end);
     %just add min times for now

@@ -1,8 +1,12 @@
 num_CP = 3;
 x0 = zeros(num_CP,3);
 tic
-[x, fval] = fmincon(@Obj_fun,x0, [],[],[],[],[],[],@nonlin)
+[x, fval] = fmincon(@Obj_fun,x0, [],[],[],[],[],[],@nonlin);
 toc
+
+idealCPs  = x
+[total_time, d] = thebigf(x)
+
 function obj = Obj_fun(x)
     obj = thebigf(x);
 end
