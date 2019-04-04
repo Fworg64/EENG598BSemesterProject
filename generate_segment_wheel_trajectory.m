@@ -130,6 +130,7 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
       chi = .02;
        
       grad_sign = sign(b(index_from_prev)) + 1.0*(b(index_from_prev) == 0);
+      grad_sign = 1;
       above_or_below_sign = sign(max_accel_abs - Ur_dot_plus) +...
                             1.0*(max_accel_abs - Ur_dot_plus == 0);
       while (abs(delta_ul_dot) > .01 || abs(delta_ur_dot) > .01)
