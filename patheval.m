@@ -1,6 +1,6 @@
-function [total_time, curve_length,turnance, omega_dx, delta_x_delta_t] =...
+function [Uls, Urs, min_total_time, curve_length,turnance, omega_dx, delta_x_delta_t] =...
     patheval(dist1, dist2, angle1, angle2, P0, P3, delta_t, angle_norm,...
-    top_wheel_speed, axel_len,initial_ul, initial_ur,max_accel, plot_on)
+    top_wheel_speed, axel_len,initial_ul, initial_ur,max_accel, delta_time, plot_on)
 %Given 2 distance parameters, and information for a begining and end pose,
 %this function returns the length of the path and a measure of how much 
 %turning is needed determined by angle_norm (1 for l1, 2 for l2...). Also
@@ -20,7 +20,7 @@ curve = (1 - t).^3 .* P0 ...
 %figure()
 if (plot_on > 0)
 clf
-subplot(4,2,1:4)
+subplot(6,2,1:4)
 plot(curve(1,:), curve(2,:))
 title('Path Visual')
 hold on;
@@ -45,7 +45,7 @@ t_off = t(1:length(t)-1) + dt/2;
 %this is rate of change of theta at each t_off
 omega_dx = delta_theta_delta_t ./ delta_x_delta_t;
 if (plot_on > 0)
-subplot(4,2,5)
+subplot(6,2,5)
 hold on;
 stem( t_off, delta_theta_delta_t, 'Marker', 's', 'Color', 'b')
 stem( t_off, delta_x_delta_t, 'Marker', 'd', 'Color', 'r')
@@ -62,11 +62,6 @@ max_left_vels = zeros(1, length(omega_dx));
 max_right_vels = zeros(1, length(omega_dx));
 times_at_t = zeros(1, length(omega_dx));
 
-prev_ul = initial_ul;
-prev_ur = initial_ur;
-max_accel_abs = .1;
-max_wheel_speed = 1;
-
 %get max possible velocities if max correction is used at each point in the
 %path, while maximizing speed
 %This is the Robust Control Invarient Set. Invarient sets are sets of
@@ -76,12 +71,35 @@ max_wheel_speed = 1;
 
 [max_left_vels, max_right_vels, speeds, omega_dt ,times_at_t] ...
     = generate_velocities_from_path(omega_dx, delta_x_delta_t, axel_len,...
-    max_accel_abs, max_wheel_speed);
+    max_accel, top_wheel_speed);
 
-%TODO add plot for max vel envelopes
+%TODO add plot for max wheel vel envelopes and chosen wheel vels
 
-%TODO Fit controller inputs to Control Invarient Set (Control Envelope)
+%Fit controller inputs to Control Invarient Set (Control Envelope)
 %and find time to travel along the path using this ideal control input.
+%TODO figure out allocation
+Uls = [];
+Urs = [];
+omega_dx_extend = [omega_dx(1),omega_dx, omega_dx(end)];
+right_start_speed = initial_ur;
+left_start_speed  = initial_ul;
+%delta_time = .02;
+for index = 1:length(omega_dx)
+    left_max_end_speed = max_left_vels(index);
+    right_max_end_speed = max_right_vels(index);
+
+    [uls_t, urs_t] = generate_segment_wheel_trajectory(...
+                      omega_dx_extend(index), omega_dx_extend(index+1),...
+                      omega_dx_extend(index+2),...
+                      delta_x_delta_t(index), axel_len,...
+                      max_accel, top_wheel_speed,...
+                      left_max_end_speed, right_max_end_speed,...
+                      left_start_speed,   right_start_speed, delta_time);
+    left_start_speed  = uls_t(end);
+    right_start_speed = urs_t(end);
+    Uls = [Uls, uls_t];
+    Urs = [Urs, urs_t];
+end
 
  robot_speed_ideal = @(omega) max(0,top_wheel_speed - axel_len/2 * abs(omega));
  max_omega = top_wheel_speed * 2 / axel_len;
@@ -92,7 +110,8 @@ max_wheel_speed = 1;
  driving_time_at_t = zeros(1, length(omega_dt));
  zero_point_turning_time_at_t = zeros(1, length(omega_dt));
  for index = 1:length(omega_dt)
-     if speeds(index) > .01 % should this just be the max of either?
+     if speeds(index) > .01 % pick best conditioned one, should be solved
+                            % simultaneously 
          driving_time_at_t(index) = ...
              delta_x_delta_t(index) ./ speeds(index);
      else
@@ -101,28 +120,38 @@ max_wheel_speed = 1;
      end
  end
  delta_time_delta_t = driving_time_at_t + zero_point_turning_time_at_t;
-total_time = sum(delta_time_delta_t);
+min_total_time = sum(delta_time_delta_t);
 %plot rad/s at each point
 if (plot_on > 0)
-subplot(4,2,6)
+subplot(6,2,6)
 stem( t_off, omega_dt, 'Marker', 'd', 'Color', 'b')
 hold on
 stem( t_off,speeds, 'Marker', '*', 'Color', 'r')
 legend('Omega (rad/s)', 'speed (m/s)');
 title('Max Radians per second and Max speed at t')
 %plot given speed function for reference
-subplot(4,2,7)
+subplot(6,2,7)
 example_omega = -1.5*max_omega:.01:1.5*max_omega;
 plot(example_omega, robot_speed_ideal(example_omega));
 hold on
 colors = linspace(0,1,length(omega_dt));
 scatter(omega_dt, speeds, [], colors);
+%TODO add plot of chosen speeds and omegas (per time)
 title('Max Speed vs omega (radians per second)')
 caxis([0, 1])
 colorbar;
-subplot(4,2,8)
+subplot(6,2,8)
 stem(t_off, delta_time_delta_t,'Marker', '^', 'Color', 'b');
+%TODO add plot of actual time at each segment
 title('Min Time spent at each segment');
+subplot(6,2,9:12)
+wheel_plot_time = 0:delta_time:(length(Uls)*delta_time - delta_time);
+plot(wheel_plot_time, Uls, wheel_plot_time, Urs);
+legend('Uls', 'Urs');
+title('Wheel Velocity Trajectory vs time');
+xlim([0, wheel_plot_time(end)]);
+xlabel('Time (s)')
+ylabel('Velocity Command (m/s)')
 end
 end
 

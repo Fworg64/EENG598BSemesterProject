@@ -63,8 +63,14 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
   x_trav = 0;
   theta_trav = 0;
   truidex = 1;
-  while ~((x_trav >= delta_x_delta_t) && (theta_trav >= omega_dx(index_from_prev)*delta_x_delta_t))
+  omega_sign_factor = sign(omega_dx(index_from_prev));
+  while ~((x_trav >= delta_x_delta_t) && ...
+          (omega_sign_factor*theta_trav >= omega_sign_factor*...
+                                omega_dx(index_from_prev)*delta_x_delta_t))
     truidex = truidex + 1;
+    if truidex > 1000
+        disp("UH OH");
+    end
     index_from_prev = 2; %copy pasta
     %should happen at the same time anyway
     %want to solve problem for well conditioned side
@@ -78,11 +84,11 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
     % delta_x_delta_t % THIS IS TRUE
     % need arc length for each wheel path
     curr_max_right_speed = min(max_abs_wheel_speed, ...
-                           sqrt(max_end_right_speed^2 +...
-                                2*(-max_accel_abs)*(x_trav - delta_x_delta_t)));
+                           real(sqrt(max_end_right_speed^2 +...
+                                2*(-max_accel_abs)*(x_trav - delta_x_delta_t))));
     curr_max_left_speed = min(max_abs_wheel_speed, ...
-                           sqrt(max_end_left_speed^2 +...
-                                2*(-max_accel_abs)*(x_trav - delta_x_delta_t)));
+                           real(sqrt(max_end_left_speed^2 +...
+                                2*(-max_accel_abs)*(x_trav - delta_x_delta_t))));
   if a(index_from_prev) < 1 && a(index_from_prev) > -1 % Ul = a Ur, so Ur is bigger                    %left wheel getting faster
       %calculate
       %iterate until appropate Ul_dot and Ur_dot are found for this timestep
@@ -93,16 +99,18 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
       delta_ul_dot = 10;
       delta_ur_dot = 10;
       chi = .02;
+      
+      grad_sign = sign(a(index_from_prev)) + 1.0*(a(index_from_prev) == 0);
+      grad_sign = 1;
+      above_or_below_sign = sign(max_accel_abs - Ul_dot_plus) +...
+                            1.0*(max_accel_abs - Ul_dot_plus == 0);
       while (abs(delta_ul_dot) > .01 || abs(delta_ur_dot) > .01)
-        grad_sign = sign(a(index_from_prev)) + 1.0*(a(index_from_prev) == 0);
-        above_or_below_sign = sign(max_accel_abs - Ul_dot_plus) +...
-                              1.0*(max_accel_abs - Ul_dot_plus == 0);
         Ur_dot_plus = Ur_dot_plus + ...
                       above_or_below_sign*grad_sign*chi*max_accel_abs;
         Ul_dot_plus = a(index_from_prev)*Ur_dot_plus + ...
                       delta_a_delta_x(index_from_prev)*speed*Ur(truidex-1); 
         if ((Ur_dot_plus >= max_accel_abs) || (Ur_dot_plus <= -max_accel_abs) ||...
-           (Ul_dot_plus >= max_accel_abs) || (Ul_dot_plus <= -max_accel_abs))
+             (sign(max_accel_abs - Ul_dot_plus) ~= above_or_below_sign))
             delta_ul_dot = 0;
             delta_ur_dot = 0;
         end
@@ -120,19 +128,20 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
       delta_ul_dot = 10;
       delta_ur_dot = 10;
       chi = .02;
+       
+      grad_sign = sign(b(index_from_prev)) + 1.0*(b(index_from_prev) == 0);
+      above_or_below_sign = sign(max_accel_abs - Ur_dot_plus) +...
+                            1.0*(max_accel_abs - Ur_dot_plus == 0);
       while (abs(delta_ul_dot) > .01 || abs(delta_ur_dot) > .01)
           %note that Ul_dot_plus update eq is the same for each case
           % and the relation bewtwen sign of a, a_dot and condition and
           % increment direction.
-        grad_sign = sign(b(index_from_prev)) + 1.0*(b(index_from_prev) == 0);
-        above_or_below_sign = sign(max_accel_abs - Ur_dot_plus) +...
-                              1.0*(max_accel_abs - Ur_dot_plus == 0);
         Ul_dot_plus = Ul_dot_plus + ...
                       above_or_below_sign*grad_sign*chi*max_accel_abs;
         Ur_dot_plus = b(index_from_prev)*Ul_dot_plus + ...
                       delta_b_delta_x(index_from_prev)*speed*Ul(truidex-1); 
         if ((Ur_dot_plus >= max_accel_abs) || (Ur_dot_plus <= -max_accel_abs) ||...
-           (Ul_dot_plus >= max_accel_abs) || (Ul_dot_plus <= -max_accel_abs))
+           (sign(max_accel_abs - Ur_dot_plus) ~= above_or_below_sign))
             delta_ul_dot = 0;
             delta_ur_dot = 0;
         end
@@ -141,7 +150,7 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
       Ul(truidex) = Ul(truidex-1) + Ul_dot_plus * dt;
     if Ul(truidex) >= curr_max_right_speed
       Ul(truidex) = curr_max_left_speed;
-      Ur(truidex) = b(index_from_prev) * Ur(truidex);
+      Ur(truidex) = b(index_from_prev) * Ul(truidex);
     end
   end
   % 7. Check end conditions ( done in while loop expression).
