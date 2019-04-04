@@ -1,6 +1,6 @@
 function [max_left_vels, max_right_vels, speeds, omega_dt ,times_at_t]...
-         = generate_velocities_from_path(omega_dx, delta_x_delta_t,...
-                                   axel_len, max_accel_abs, max_wheel_speed)
+         = generate_velocities_from_path( omega_dx, delta_x_delta_t,...
+                                         axel_len, max_accel_abs, max_wheel_speed)
 %GENERATE_VELOCITIES_FROM_PATH Finds max vels at max correction
 %   This constitues the Control Invarient Set, the pairs of states
 %   and control inputs that are the boundary of the constraints.
@@ -41,7 +41,7 @@ function [max_left_vels, max_right_vels, speeds, omega_dt ,times_at_t]...
           if delta_a_delta_x(index)> 0 % straitening out, right wheel faster
                         %left wheel getting faster
               %max correction
-              if a > 0 %turning outside left wheel
+              if a(index) > 0 %turning outside left wheel
                   Ul_dot(index) = max_accel_abs; %speed up
                   Ur_dot(index) = -max_accel_abs;
               else %turning inside left wheel
