@@ -101,7 +101,7 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
       chi = .02;
       
       grad_sign = sign(a(index_from_prev)) + 1.0*(a(index_from_prev) == 0);
-      grad_sign = 1;
+      %grad_sign = 1;
       above_or_below_sign = sign(max_accel_abs - Ul_dot_plus) +...
                             1.0*(max_accel_abs - Ul_dot_plus == 0);
       while (abs(delta_ul_dot) > .01 || abs(delta_ur_dot) > .01)
@@ -117,10 +117,6 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
       end
       Ur(truidex) = Ur(truidex-1) + Ur_dot_plus * dt;
       Ul(truidex) = Ul(truidex-1) + Ul_dot_plus * dt;
-      if Ur(truidex) >= curr_max_right_speed
-        Ur(truidex) = curr_max_right_speed;
-        Ul(truidex) = a(index_from_prev) * Ur(truidex);
-      end
   else %better'd use b
       Ul_dot_plus = 0;
       Ur_dot_plus = b(index_from_prev)*Ul_dot_plus + ...
@@ -130,7 +126,7 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
       chi = .02;
        
       grad_sign = sign(b(index_from_prev)) + 1.0*(b(index_from_prev) == 0);
-      grad_sign = 1;
+      %grad_sign = 1;
       above_or_below_sign = sign(max_accel_abs - Ur_dot_plus) +...
                             1.0*(max_accel_abs - Ur_dot_plus == 0);
       while (abs(delta_ul_dot) > .01 || abs(delta_ur_dot) > .01)
@@ -149,12 +145,21 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
       end
       Ur(truidex) = Ur(truidex-1) + Ur_dot_plus * dt;
       Ul(truidex) = Ul(truidex-1) + Ul_dot_plus * dt;
-    if Ul(truidex) >= curr_max_left_speed
+  end
+  % 7. Check end conditions
+  if Ul(truidex) >= curr_max_left_speed
       Ul(truidex) = curr_max_left_speed;
       Ur(truidex) = b(index_from_prev) * Ul(truidex);
-    end
   end
-  % 7. Check end conditions ( done in while loop expression).
+  if Ur(truidex) >= curr_max_right_speed
+        Ur(truidex) = curr_max_right_speed;
+        Ul(truidex) = a(index_from_prev) * Ur(truidex);
+  end
+  if Ul(truidex) >= curr_max_left_speed
+      Ul(truidex) = curr_max_left_speed;
+      Ur(truidex) = b(index_from_prev) * Ul(truidex);
+  end
+  
   % 7a. Maybe someday we will know how long it will take based on 
   %     problem parameters (resonable).
   x_trav = x_trav + .5*(Ur(truidex) + Ul(truidex))*dt;
