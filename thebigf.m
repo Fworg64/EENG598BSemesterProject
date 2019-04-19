@@ -16,7 +16,7 @@ axel_len = .62;
 max_accel = .4;
 plot_on = 0;
 
-use_real_wheels =0;
+use_real_wheels =1;
 
 %need to optimize over these two vars for each CP
 %d1 = 1.01;

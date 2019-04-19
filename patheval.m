@@ -26,7 +26,9 @@ if (plot_on > 0)
 clf
 subplot(6,2,1:4)
 plot(curve(1,:), curve(2,:))
-title('Path Visual')
+path_title = sprintf('Path Visual. Going to (%.4f, %.4f) theta = %.4f \n with control parameters %.4f, %.4f',...
+                   P3(1), P3(2), angle2, dist1, dist2);
+title(path_title)
 hold on;
 plot(P1(1), P1(2), 'g*', [P0(1),P1(1)], [P0(2),P1(2)], 'g--')
 plot(P2(1), P2(2), 'r*', [P2(1),P3(1)], [P2(2),P3(2)], 'r--')
@@ -86,6 +88,8 @@ if (do_real_wheels)
 Uls = [];
 Urs = [];
 omega_dx_extend = [omega_dx(1),omega_dx, omega_dx(end)];
+delta_x_delta_t_extend = [delta_x_delta_t(1),delta_x_delta_t,...
+                          delta_x_delta_t(end)];
 right_start_speed = initial_ur;
 left_start_speed  = initial_ul;
 time_per_segment = zeros(1,length(omega_dx));
@@ -94,19 +98,21 @@ for index = 1:length(omega_dx)
     left_max_end_speed = max_left_vels(index);
     right_max_end_speed = max_right_vels(index);
 
-    [uls_t, urs_t] = generate_segment_wheel_trajectory(...
+    [uls_t, urs_t] = generate_segment_wheel_trajectory_v2(...
                       omega_dx_extend(index), omega_dx_extend(index+1),...
                       omega_dx_extend(index+2),...
-                      delta_x_delta_t(index), axel_len,...
-                      max_accel, top_wheel_speed,...
+                      delta_x_delta_t_extend(index:index+2), axel_len,...
+                      max_accel, -max_accel,top_wheel_speed,...
                       left_max_end_speed, right_max_end_speed,...
                       left_start_speed,   right_start_speed, delta_time);
     left_start_speed  = uls_t(end);
     right_start_speed = urs_t(end);
-    prev_len = length(Uls);
     Uls = [Uls, uls_t];
     Urs = [Urs, urs_t];
-    time_per_segment(index) = length(Uls)*delta_time - prev_len*delta_time;
+    time_per_segment(index) = length(uls_t)*delta_time;
+    if (index ==96)
+        disp("derr");
+    end
 end
 else
     Uls = max_left_vels(end);
@@ -133,6 +139,9 @@ end
  end
  delta_time_delta_t = driving_time_at_t + zero_point_turning_time_at_t;
 min_total_time = sum(delta_time_delta_t);
+if (do_real_wheels)
+    min_total_time = sum(time_per_segment);
+end
 %plot rad/s at each point
 if (plot_on > 0)
 subplot(6,2,6)
