@@ -9,7 +9,7 @@ P3 = [4;1];
 angle2 = .1; %;+.2618;
 
 dist1 = .9539;
-dist2 =	.09114;
+dist2 =	.9114;
 
 initial_ul = 0;
 initial_ur = 0;

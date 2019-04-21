@@ -85,8 +85,8 @@ times_at_t = zeros(1, length(omega_dx));
 %and find time to travel along the path using this ideal control input.
 %TODO figure out allocation
 if (do_real_wheels)
-Uls = [];
-Urs = [];
+Uls = [initial_ul];
+Urs = [initial_ur];
 omega_dx_extend = [omega_dx(1),omega_dx, omega_dx(end)];
 delta_x_delta_t_extend = [delta_x_delta_t(1),delta_x_delta_t,...
                           delta_x_delta_t(end)];
@@ -94,6 +94,8 @@ right_start_speed = initial_ur;
 left_start_speed  = initial_ul;
 time_per_segment = zeros(1,length(omega_dx));
 %delta_time = .02;
+%max_left_vels = [top_wheel_speed, max_left_vels];
+%max_right_vels = [top_wheel_speed, max_right_vels];
 for index = 1:length(omega_dx)
     left_max_end_speed = max_left_vels(index);
     right_max_end_speed = max_right_vels(index);
@@ -105,11 +107,14 @@ for index = 1:length(omega_dx)
                       max_accel, -max_accel,top_wheel_speed,...
                       left_max_end_speed, right_max_end_speed,...
                       left_start_speed,   right_start_speed, delta_time);
+    if (uls_t(end) > left_max_end_speed || urs_t(end) > right_max_end_speed)
+        disp("WHYYY");
+    end
     left_start_speed  = uls_t(end);
     right_start_speed = urs_t(end);
-    Uls = [Uls, uls_t];
-    Urs = [Urs, urs_t];
-    time_per_segment(index) = length(uls_t)*delta_time;
+    Uls = [Uls, uls_t(2:end)];
+    Urs = [Urs, urs_t(2:end)];
+    time_per_segment(index) = (length(uls_t)-1)*delta_time;
     if (index ==96)
         disp("derr");
     end

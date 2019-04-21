@@ -65,6 +65,10 @@ omega_dx = [omega_dx_prev, omega_dx_curr, omega_dx_next];
   theta_trav = 0;
   truidex = 1;
   omega_sign_factor = 2*(omega_dx(2) > 0) - 1;
+  
+  a = a_set(2);
+  b = b_set(2);
+  
 while ~((x_trav >= delta_x_delta_t(2)) || ...
           (omega_sign_factor*theta_trav >= omega_sign_factor*...
                                 omega_dx(index_from_prev)*delta_x_delta_t(2)))
@@ -75,129 +79,59 @@ while ~((x_trav >= delta_x_delta_t(2)) || ...
         fprintf("theta: %.4f / %.4f\n", omega_sign_factor*theta_trav, ...
               omega_sign_factor*omega_dx(index_from_prev)*delta_x_delta_t(2));
     end
-    Ul_dot_upperbound = .01 + max_pos_accel * (Ul(truidex-1) < max_end_left_speed);%min(max_pos_accel, ...
-                        %    (max_end_left_speed - Ul(truidex-1))*dt);
-    Ur_dot_upperbound = .01 + max_pos_accel * (Ur(truidex-1) < max_end_right_speed);%min(max_pos_accel, ...
-                        %    (max_end_right_speed - Ur(truidex-1))*dt);
-    Ul_dot_lowerbound = max(max_neg_accel, ...
-                            (Ul(truidex-1)-max_end_left_speed)*dt);
-    Ur_dot_lowerbound = max(max_neg_accel, ...
-                            (Ur(truidex-1)-max_end_right_speed)*dt);
+    Ul_dot_upperbound = min(max_pos_accel*dt, (max_end_left_speed  - Ul(truidex-1)));
+    Ur_dot_upperbound = min(max_pos_accel*dt, (max_end_right_speed - Ur(truidex-1)));
+    Ul_dot_lowerbound = min(Ul_dot_upperbound, max(max_neg_accel*dt, (-max_abs_wheel_speed - Ul(truidex-1))));
+    Ur_dot_lowerbound = min(Ur_dot_upperbound, max(max_neg_accel*dt, (-max_abs_wheel_speed - Ur(truidex-1))));
     speed = .5 * (Ur(truidex-1) + Ul(truidex-1));
     a_dot = delta_a_delta_x(2)*speed;
     b_dot = delta_b_delta_x(2)*speed;
     
-    output = zeros(2,2);
-    a = a_set(2);
-    b = b_set(2);
 if (a <= 1.0)
-    Ul_dot_plus = a_dot*Ur(truidex-1);
-    Ur_dot_plus = 0;
-    if (Ul_dot_plus > Ul_dot_upperbound)
-        break_var =0;
-        while(Ul_dot_plus > Ul_dot_upperbound && break_var == 0)
-          if (a > 0) %decrement Ur_dot
-            Ur_dot_plus = Ur_dot_plus - .02*abs(max_neg_accel);
-            Ul_dot_plus = a_dot*Ur(truidex-1) + a*Ur_dot_plus;
-            if (Ur_dot_plus <= max_neg_accel)
-                break_var = 1;
-            end
-          else %increase Ur_dot
-            Ur_dot_plus = Ur_dot_plus + .02*abs(max_pos_accel);
-            Ul_dot_plus = a_dot*Ur(truidex-1) + a*Ur_dot_plus;
-            if (Ur_dot_plus >= max_pos_accel)
-                break_var = 1;
-            end
+  Ur_dot_plus = Ur_dot_upperbound;
+  Ul_dot_plus = a*(Ur_dot_plus + Ur(truidex - 1)) - Ul(truidex - 1);
+  if (Ul_dot_plus > Ul_dot_upperbound || Ul_dot_plus < Ul_dot_lowerbound)
+      if abs(a) > .01
+          if a > 0
+              Ul_dot_plus = Ul_dot_upperbound;
+          else
+              Ul_dot_plus = Ul_dot_lowerbound;
           end
-        end
-    else %if (Ul_dot_plus < Ul_dot_lowerbound)
-        break_var =0;
-        while(Ul_dot_plus < Ul_dot_upperbound && break_var == 0)
-          if (a > 0) %increment Ur_dot
-            Ur_dot_plus = Ur_dot_plus + .02*abs(max_pos_accel);
-            Ul_dot_plus = a_dot*Ur(truidex-1) + a*Ur_dot_plus;
-            if (Ur_dot_plus >= max_pos_accel)
-                break_var = 1;
-            end
-          else %decrement Ur_dot
-            Ur_dot_plus = Ur_dot_plus - .02*abs(max_neg_accel);
-            Ul_dot_plus = a_dot*Ur(truidex-1) + a*Ur_dot_plus;
-            if (Ur_dot_plus <= max_neg_accel)
-                break_var = 1;
-            end
-          end
-        end
-    end
+          Ur_dot_plus = (Ul_dot_plus + Ul(truidex - 1))/a - Ul(truidex -1);
+      end
+  end
+  if (Ur_dot_plus > Ur_dot_upperbound || Ur_dot_plus < Ur_dot_lowerbound)
+      lambda = (a*Ur(truidex -1) - Ul(truidex - 1))/(-(a^2) - 1);
+      Ul_dot_plus = -lambda;
+      Ur_dot_plus = a*lambda;
+      fprintf("Infeasable answer: %.4f, %.4f", Ul_dot_plus, Ur_dot_plus);
+  end 
 else %better'd use b
-    Ur_dot_plus = b_dot*Ul(truidex-1);
-    Ul_dot_plus = 0;
-    if (Ur_dot_plus > Ur_dot_upperbound)
-        break_var =0;
-        while(Ur_dot_plus > Ur_dot_upperbound && break_var == 0)
-          if (b > 0) %decrement Ul_dot
-            Ul_dot_plus = Ul_dot_plus - .02*abs(max_neg_accel);
-            Ur_dot_plus = b_dot*Ul(truidex-1) + b*Ul_dot_plus;
-            if (Ul_dot_plus <= max_neg_accel)
-                break_var = 1;
-            end
-          else %increase Ul_dot
-            Ul_dot_plus = Ul_dot_plus + .02*abs(max_pos_accel);
-            Ur_dot_plus = b_dot*Ul(truidex-1) + b*Ul_dot_plus;
-            if (Ul_dot_plus >= max_pos_accel)
-                break_var = 1;
-            end
+  Ul_dot_plus = Ul_dot_upperbound;
+  Ur_dot_plus = b*(Ul_dot_plus + Ul(truidex - 1)) - Ur(truidex - 1);
+  if (Ur_dot_plus > Ur_dot_upperbound || Ur_dot_plus < Ur_dot_lowerbound)
+      if abs(b) > .01
+          if b > 0
+              Ur_dot_plus = Ur_dot_upperbound;
+          else
+              Ur_dot_plus = Ur_dot_lowerbound;
           end
-        end
-    else %if (Ul_dot_plus < Ul_dot_lowerbound)
-        break_var =0;
-        while(Ur_dot_plus < Ur_dot_upperbound && break_var == 0)
-          if (b > 0) %increment Ul_dot
-            Ul_dot_plus = Ul_dot_plus + .02*abs(max_pos_accel);
-            Ur_dot_plus = b_dot*Ul(truidex-1) + b*Ul_dot_plus;
-            if (Ul_dot_plus >= max_pos_accel)
-                break_var = 1;
-            end
-          else %decrement Ul_dot
-            Ul_dot_plus = Ul_dot_plus - .02*abs(max_neg_accel);
-            Ur_dot_plus = b_dot*Ul(truidex-1) + b*Ul_dot_plus;
-            if (Ul_dot_plus <= max_neg_accel)
-                break_var = 1;
-            end
-          end
-        end
-    end
+          Ul_dot_plus = (Ur_dot_plus + Ur(truidex - 1))/b - Ur(truidex -1);
+      end
+  end
+  if (Ul_dot_plus > Ul_dot_upperbound || Ul_dot_plus < Ul_dot_lowerbound)
+      lambda = (b*Ul(truidex -1) - Ur(truidex - 1))/(-(b^2) - 1);
+      Ur_dot_plus = -lambda;
+      Ul_dot_plus = b*lambda;
+      fprintf("Infeasable answer: %.4f, %.4f", Ul_dot_plus, Ur_dot_plus);
+  end 
 end
 
-output(1) = Ul_dot_plus;
-output(2) = Ur_dot_plus;
-
-%     f = -[1, 1];
-%     A = [1, 0; -1, 0;
-%          0, 1;  0,-1];
-%     B = [Ul_dot_upperbound;-Ul_dot_lowerbound;...
-%          Ur_dot_upperbound;-Ur_dot_lowerbound];
-%   if (abs(a(2)) < abs(b(2))) %use a
-%       Aeq = [1, -a(2)];
-%       Beq = [a_dot*Ur(truidex-1)];
-%   else
-%       Aeq = [-b(2), 1];
-%       Beq = [b_dot*Ul(truidex-1)];
-%   end
-%   options = optimset('linprog');
-%   options.Display = 'off';
-%   output = linprog(f, A, B, Aeq, Beq);
-%   if (length(output) ~= 2)
-%       if (omega_dx(2) > 0)
-%         output(1) = max_neg_accel;
-%         output(2) = max_pos_accel;
-%       else
-%         output(1) = max_pos_accel;
-%         output(2) = max_neg_accel;
-%       end
-%   end
-
-  Ul(truidex) = Ul(truidex-1) + output(1)*dt;
-  Ur(truidex) = Ur(truidex-1) + output(2)*dt;
+  Ul(truidex) = Ul(truidex-1) + Ul_dot_plus;
+  Ur(truidex) = Ur(truidex-1) + Ur_dot_plus;
+  a = a + a_dot*dt;
+  b = b + b_dot*dt;
+  
   %check lower bounds too
   
   % 7a. Maybe someday we will know how long it will take based on 
