@@ -90,8 +90,6 @@ Urs = [initial_ur];
 omega_dx_extend = [omega_dx(1),omega_dx, omega_dx(end)];
 delta_x_delta_t_extend = [delta_x_delta_t(1),delta_x_delta_t,...
                           delta_x_delta_t(end)];
-right_start_speed = initial_ur;
-left_start_speed  = initial_ul;
 time_per_segment = zeros(1,length(omega_dx));
 %delta_time = .02;
 %max_left_vels = [top_wheel_speed, max_left_vels];
@@ -100,13 +98,32 @@ for index = 1:length(omega_dx)
     left_max_end_speed = max_left_vels(index);
     right_max_end_speed = max_right_vels(index);
 
-    [uls_t, urs_t] = generate_segment_wheel_trajectory_v2(...
-                      omega_dx_extend(index), omega_dx_extend(index+1),...
-                      omega_dx_extend(index+2),...
-                      delta_x_delta_t_extend(index:index+2), axel_len,...
-                      max_accel, -max_accel,top_wheel_speed,...
-                      left_max_end_speed, right_max_end_speed,...
-                      left_start_speed,   right_start_speed, delta_time);
+    robot_state = [0, 0, 0];
+    CPP_t = 0;
+    ul = initial_ul;
+    ur = initial_ur;
+    speed = .5*(ul + ur);
+    speed_setpoint = top_wheel_speed;
+    while (CPP_t < .99) %TODO add timeout/error checker/aborter
+        speed = .5*(ul + ur);
+        prev_CPP_t = CPP_t;
+        [CPP_t, path_err, angle_err] = findCPP2019Spring(robot_state(1), robot_state(2), robot_state(3), curve, path_fwd);
+        if CPP_t < prev_CPP_t
+            CPP_t = prev_CPP_t;
+        end
+        steering = omega_dx(int32(CPP_t/delta_t)); %get from path (omega_dx at t)
+        %TODO cap speed setpoint with max speed from dual solution
+        speed = speed - .00005*(speed - speed_setpoint);
+        %TODO add feedback from path and angle error
+        [ul, ur] = sscv2019Spring(speed, steering, axel_len,top_wheel_speed); 
+        %TODO add robot dynamics
+        x = x + robot_dynamics(x,ul, ur, delta_time);
+        
+        uls_t = [uls_t, ul]; %record wheel vels
+        urs_t = [urs_t, ur];
+    end
+       
+
     if (uls_t(end) > left_max_end_speed || urs_t(end) > right_max_end_speed)
         disp("WHYYY");
     end
