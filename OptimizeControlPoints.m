@@ -4,13 +4,13 @@ global x_start
 global x_final
 global Rocks;
 
-Rocks = [2, 1.5, 1.5]; %rows of x,y,radius
+Rocks = [2, 1.5, 1.0]; %rows of x,y,radius
 x_start = [0, 0, 0];
 x_final = [6, 2, -1.6];
-x0 = [x_final/4;
-      3*x_final/4];
+x0 = [x_final/2;
+      1*x_final/2];
   
-options = optimoptions('fmincon', 'Algorithm', 'sqp');
+options = optimoptions('fmincon', 'Algorithm', 'interior-point');
 tic
 [x, fval] = fmincon(@Obj_fun,x0, [],[],[],[],[],[],@nonlin, options);
 toc
