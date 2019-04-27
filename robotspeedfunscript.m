@@ -5,11 +5,11 @@ top_wheel_speed = 1.0; %m/s
 axel_len = .62; %meters
 
 angle1 = 0;
-P3 = [3.98;-.0671];
-angle2 = .9027; %;+.2618;
+P3 = [-.7774;-.2328]%P3%idealCPs(1,1:2)%[3.98;-.0671];
+angle2 = .1853; %;+.2618;
 
-dist1 = .9250;
-dist2 =	.4375;
+dist1 = .4750;
+dist2 =	.5250;
 
 initial_ul = 0;
 initial_ur = 0;

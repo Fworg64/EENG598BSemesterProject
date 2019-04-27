@@ -14,7 +14,7 @@ CPP_t = closest_index;
 CPP_t_safe = max(2, closest_index);
 %get path angle at point
 path_angle = angleDiff(atan2(points(2, CPP_t_safe) - points(2,CPP_t_safe-1),...
-                             points(1, CPP_t_safe) - points(1,CPP_t_safe-1)), -pi*(path_fwd==0));
+                             points(1, CPP_t_safe) - points(1,CPP_t_safe-1)), -0*pi*(path_fwd==0));
 angle_to_robot = atan2(y-points(2, CPP_t_safe), x - points(1, CPP_t_safe));
 angle_err = angleDiff(path_angle, theta);
 if angleDiff(angle_to_robot, path_angle) > 0

@@ -8,11 +8,12 @@ figure();
 hold on;
 P0 = [0;0]; %start point
 angle1 = 0;
+angle2 = 0;
 P3 = [0;0];
 for index = 1:dims(1)
     P3 = CPs(index, 1:2)' + P3;
     %angle1 = CPs(index  ,3);
-    angle2 = CPs(index,3);
+    angle2 = CPs(index,3) + angle2;
     dist1 = ds(index, 1);
     dist2 = ds(index, 2);
 P1 = P0 + dist1*[cos(angle1);sin(angle1)];
