@@ -15,6 +15,7 @@ angle2 = .1;%pi/2; %;+.2618;
 initial_ul = 1;
 initial_ur = 1;
 max_accel = 4.0; %m/s^2
+do_real_wheels = 1;
 
 x1 = .01:.1:6;
 x2 = .01:.1:6;
@@ -22,7 +23,8 @@ total_time_plot = zeros(length(x1),length(x2));
 turnance_plot = zeros(length(x1), length(x2));
 delta_time = .02;
 tic
-parfor (index1 = 1:length(x1),length(x1)) %dont really need the parfor
+%parfor (index1 = 1:length(x1),length(x1)) %dont really need the parfor
+for index1 = 1:length(x1)
     xx_1 = x1(index1);
     total_time_plot_row = zeros(1,length(x2));
     turnance_plot_row = zeros(1,length(x2));
@@ -31,7 +33,8 @@ parfor (index1 = 1:length(x1),length(x1)) %dont really need the parfor
         turnance_plot_row(index2), omega_dx, delta_x_delta_t] = ...
         patheval(xx_1,x2(index2),...
         angle1,angle2, [0;0],P3,delta_t, angle_norm_type, ...
-        top_wheel_speed, axel_len,initial_ul, initial_ur, max_accel,delta_time, 0, 0);
+        top_wheel_speed, axel_len,initial_ul, initial_ur, max_accel,delta_time, ...
+        0, do_real_wheels);
     end
     total_time_plot(index1, :) = total_time_plot_row;
     turnance_plot(index1, :) = turnance_plot_row;

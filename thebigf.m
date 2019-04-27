@@ -16,7 +16,7 @@ axel_len = .62;
 max_accel = .4;
 plot_on = 0;
 
-use_real_wheels =0;
+use_real_wheels =1;
 
 %need to optimize over these two vars for each CP
 %d1 = 1.01;
@@ -25,12 +25,20 @@ use_real_wheels =0;
 function [path_time_eval, Uls, Urs] = shorthand_path(x, CP, initial_ul, initial_ur)
     d1 = x(1);
     d2 = x(2);
+    path_time_eval = 0;
+    if (d1 > 5 || d2 >5)
+        path_time_eval = 200;
+    end
+    if (d1 <.01 || d2 < .01)
+        path_time_eval = 200;
+    end
+    
     [Uls, Urs, min_time, curve_length, ...
         turnance, omega_dx, delta_x_delta_t] = ...
         patheval(d1,d2,...
         0,CP(3), [0;0],[CP(1); CP(2)], delta_t, angle_norm_type, ...
         top_wheel_speed, axel_len,initial_ul, initial_ur, max_accel,delta_time, plot_on, use_real_wheels);
-    path_time_eval = min_time;
+    path_time_eval = path_time_eval + min_time;
 end
 
 initial_ul = 0;
