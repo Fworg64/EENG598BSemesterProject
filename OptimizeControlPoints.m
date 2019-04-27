@@ -6,16 +6,16 @@ global Rocks;
 
 num_CP = 2;
 
-Rocks = [3, 1, 1.0]; %rows of x,y,radius
+Rocks = [3, 2, 1.0]; %rows of x,y,radius
 x_start = [0, 0, 0];
-x_final = [6, 2, -1.6];
+x_final = [6, 2, 1.6];
 x0 = [x_final/4;
       3*x_final/2];
   
 num_vars = length(x0(:));
 Aineq = [eye(num_vars);
          -eye(num_vars)];
-Bineq = [repmat([10; 10; 3.5], num_CP, 1);repmat([10; 10; 3.5], num_CP, 1)];
+Bineq = [repmat([10; 10; 3.5], num_CP, 1);repmat([-1; 10; 3.5], num_CP, 1)];
 
 %Aeq = repmat(eye(3),1,num_CP);
 %Beq = x_final';
