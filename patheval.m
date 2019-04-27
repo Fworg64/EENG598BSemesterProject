@@ -104,30 +104,34 @@ time_per_segment = zeros(1,length(omega_dx));
     CPP_time = 0;
     angle_gain = 2.5;
     path_gain  = 5.3;
-    speed_gain = .05;
+    speed_gain = .15;
     path_fwd = 1; %TODO use
     robot_state_record = [robot_state];
     uls_t = [];
     urs_t = [];
     %TODO clean use of CPP_t, right now it is raw index with curve size 100
-    while (CPP_t < 99) %TODO add timeout/error checker/aborter
+    while (CPP_t <= 99) %TODO add timeout/error checker/aborter
         left_max_end_speed = max_left_vels(CPP_t);
         right_max_end_speed = max_right_vels(CPP_t);
         CPP_time = CPP_time + delta_time;
+        if CPP_time > 2.0
+            disp("UH-OH");
+        end
         prev_CPP_t = CPP_t;
         [CPP_t, path_err, angle_err] = findCPP2019Spring(robot_state(1), robot_state(2), robot_state(3), curve, path_fwd);
         if CPP_t < prev_CPP_t
             CPP_t = prev_CPP_t;
         elseif CPP_t > prev_CPP_t
+            CPP_t = min(CPP_t, 100);
             time_per_segment(CPP_t) = CPP_time;
             CPP_time = 0;
         end
         steering = omega_dx(int32(CPP_t)); %get from path (omega_dx at t)
         speed = speed - speed_gain*(speed - min(speed_setpoint, .5*(left_max_end_speed + right_max_end_speed)));
 
-        p_steering_cmd = angle_gain*angle_err;
+        p_steering_cmd = -angle_gain*angle_err;
         path_err_comp = path_gain*path_err;
-        [ul, ur] = sscv2019Spring(speed, steering - 0*p_steering_cmd - 0*path_err_comp, axel_len, top_wheel_speed); 
+        [ul, ur] = sscv2019Spring(speed, steering - 1*p_steering_cmd - 1*path_err_comp, axel_len, top_wheel_speed); 
         robot_state = robot_state + robotdynamics(ul, ur, robot_state(3), delta_time, 1, axel_len);
         uls_t = [uls_t, ul]; %record wheel vels
         urs_t = [urs_t, ur];
