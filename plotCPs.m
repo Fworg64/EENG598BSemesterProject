@@ -36,8 +36,15 @@ for index = 1:numRocks(1)
               2*Rocks(index,3),  2*Rocks(index,3)];
    rectangle('Position', Rockxy, 'Curvature', 1); 
 end
+disfont = 24;
+a = get(gca,'XTickLabel');
+set(gca,'XTickLabel',a,'fontsize',disfont)
 xlim([0, 6]);
 ylim([-5, 5]);
+title('Robot Path over Costmap', 'fontsize', disfont)
+xlabel('Distance (m)', 'fontsize', disfont)
+ylabel('Distance (m)', 'fontsize', disfont)
+pbaspect([1, 1, 1])
 
 end
 

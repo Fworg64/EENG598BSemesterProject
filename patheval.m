@@ -142,7 +142,24 @@ time_per_segment = zeros(1,length(omega_dx));
         robot_state_record = [robot_state_record, robot_state];
         robot_state(3) = angleDiff(robot_state(3),0);
     end
-       
+    %spin off final angle error
+    [~, ~, final_angle_err] = findCPP2019Spring(curve(1,end), curve(2,end), robot_state(3), curve, path_fwd);
+    while (abs(final_angle_err) > .05)
+         if final_angle_err < 0
+             ul = top_wheel_speed;
+             ur = -top_wheel_speed;
+         else
+             ul = -top_wheel_speed;
+             ur = top_wheel_speed;
+         end
+         robot_state = robot_state + robotdynamics(ul,ur, robot_state(3), delta_time, 1, axel_len);
+         [~, ~, final_angle_err] = findCPP2019Spring(curve(1,end), curve(2,end), robot_state(3), curve, path_fwd);
+
+         uls_t = [uls_t, ul]; %record wheel vels
+         urs_t = [urs_t, ur];
+         robot_state_record = [robot_state_record, robot_state];
+         robot_state(3) = angleDiff(robot_state(3),0);
+    end
     Uls = [Uls, uls_t(2:end)];
     Urs = [Urs, urs_t(2:end)];
 %end

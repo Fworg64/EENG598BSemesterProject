@@ -6,12 +6,12 @@ global Rocks;
 
 num_CP = 2;
 
-Rocks = [3, 2, 1.0]; %rows of x,y,radius
+Rocks = [3, 1, 1.0]; %rows of x,y,radius
 x_start = [0, 0, 0];
-x_final = [6, 2, 1.6];
+x_final = [6, 2, 0];
 x0 = [x_final/4;
       3*x_final/2];
-  
+%x0 = x_final  
 num_vars = length(x0(:));
 Aineq = [eye(num_vars);
          -eye(num_vars)];
