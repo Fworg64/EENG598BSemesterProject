@@ -87,55 +87,56 @@ times_at_t = zeros(1, length(omega_dx));
 if (do_real_wheels)
 Uls = [initial_ul];
 Urs = [initial_ur];
-omega_dx_extend = [omega_dx(1),omega_dx, omega_dx(end)];
-delta_x_delta_t_extend = [delta_x_delta_t(1),delta_x_delta_t,...
-                          delta_x_delta_t(end)];
+%omega_dx_extend = [omega_dx(1),omega_dx, omega_dx(end)];
+%delta_x_delta_t_extend = [delta_x_delta_t(1),delta_x_delta_t,...
+%                          delta_x_delta_t(end)];
 time_per_segment = zeros(1,length(omega_dx));
-%delta_time = .02;
 %max_left_vels = [top_wheel_speed, max_left_vels];
 %max_right_vels = [top_wheel_speed, max_right_vels];
-for index = 1:length(omega_dx)
-    left_max_end_speed = max_left_vels(index);
-    right_max_end_speed = max_right_vels(index);
+%for index = 1:length(omega_dx)
 
-    robot_state = [0, 0, 0];
-    CPP_t = 0;
+    robot_state = [0; 0; 0];
+    CPP_t = 1;
     ul = initial_ul;
     ur = initial_ur;
     speed = .5*(ul + ur);
     speed_setpoint = top_wheel_speed;
-    while (CPP_t < .99) %TODO add timeout/error checker/aborter
-        speed = .5*(ul + ur);
+    CPP_time = 0;
+    angle_gain = 2.5;
+    path_gain  = 5.3;
+    speed_gain = .05;
+    path_fwd = 1; %TODO use
+    robot_state_record = [robot_state];
+    uls_t = [];
+    urs_t = [];
+    %TODO clean use of CPP_t, right now it is raw index with curve size 100
+    while (CPP_t < 99) %TODO add timeout/error checker/aborter
+        left_max_end_speed = max_left_vels(CPP_t);
+        right_max_end_speed = max_right_vels(CPP_t);
+        CPP_time = CPP_time + delta_time;
         prev_CPP_t = CPP_t;
         [CPP_t, path_err, angle_err] = findCPP2019Spring(robot_state(1), robot_state(2), robot_state(3), curve, path_fwd);
         if CPP_t < prev_CPP_t
             CPP_t = prev_CPP_t;
+        elseif CPP_t > prev_CPP_t
+            time_per_segment(CPP_t) = CPP_time;
+            CPP_time = 0;
         end
-        steering = omega_dx(int32(CPP_t/delta_t)); %get from path (omega_dx at t)
-        %TODO cap speed setpoint with max speed from dual solution
-        speed = speed - .00005*(speed - speed_setpoint);
-        %TODO add feedback from path and angle error
-        [ul, ur] = sscv2019Spring(speed, steering, axel_len,top_wheel_speed); 
-        %TODO add robot dynamics
-        x = x + robot_dynamics(x,ul, ur, delta_time);
-        
+        steering = omega_dx(int32(CPP_t)); %get from path (omega_dx at t)
+        speed = speed - speed_gain*(speed - min(speed_setpoint, .5*(left_max_end_speed + right_max_end_speed)));
+
+        p_steering_cmd = angle_gain*angle_err;
+        path_err_comp = path_gain*path_err;
+        [ul, ur] = sscv2019Spring(speed, steering - 0*p_steering_cmd - 0*path_err_comp, axel_len, top_wheel_speed); 
+        robot_state = robot_state + robotdynamics(ul, ur, robot_state(3), delta_time, 1, axel_len);
         uls_t = [uls_t, ul]; %record wheel vels
         urs_t = [urs_t, ur];
+        robot_state_record = [robot_state_record, robot_state];
     end
        
-
-    if (uls_t(end) > left_max_end_speed || urs_t(end) > right_max_end_speed)
-        disp("WHYYY");
-    end
-    left_start_speed  = uls_t(end);
-    right_start_speed = urs_t(end);
     Uls = [Uls, uls_t(2:end)];
     Urs = [Urs, urs_t(2:end)];
-    time_per_segment(index) = (length(uls_t)-1)*delta_time;
-    if (index ==96)
-        disp("derr");
-    end
-end
+%end
 else
     Uls = max_left_vels(end);
     Urs = max_right_vels(end);
@@ -211,6 +212,10 @@ for index = 1:length(omega_dx)
 end
 hold on;
 plot(wheel_plot_time, UlSpeedLim,'b--', wheel_plot_time, UrSpeedLim,'r--');
+%plot robots path
+subplot(6,2,1:4)
+hold on
+plot(robot_state_record(1, :), robot_state_record(2, :), 'gd')
 end
     
 end
